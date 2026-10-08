@@ -1,4 +1,5 @@
 const { chromium } = require("playwright");
+const { authenticate } = require("./smoke_auth.cjs");
 
 const url = "http://127.0.0.1:8000/medico/pre-consultas/demo/";
 const browserPath = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
@@ -18,10 +19,11 @@ function assert(condition, message) {
     if (message.type() === "error") runtimeErrors.push(message.text());
   });
 
-  const response = await page.goto(url, { waitUntil: "networkidle" });
+  const response = await authenticate(page, url);
   assert(response && response.status() === 200, "A página principal não retornou 200.");
   assert(await page.locator("#summary-title").isVisible(), "O resumo não está visível.");
   assert(await page.locator(".context-panel").isVisible(), "O painel de fontes não está visível.");
+  assert(await page.locator(".logout-button").isVisible(), "O botão Sair não está visível no desktop.");
 
   const sourceButton = page.locator(".js-view-source").first();
   const sourceKey = await sourceButton.getAttribute("data-source");
@@ -59,6 +61,7 @@ function assert(condition, message) {
   const summaryBox = await page.locator(".summary-panel").boundingBox();
   const contextBox = await page.locator(".context-panel").boundingBox();
   assert(summaryBox && contextBox && summaryBox.y < contextBox.y, "No mobile, o resumo não aparece antes das fontes.");
+  assert(await page.locator(".logout-button").isVisible(), "O botão Sair não está visível no mobile.");
   await page.screenshot({ path: "artifacts/preconsulta-mobile.png", fullPage: true });
 
   assert(runtimeErrors.length === 0, `Erros no navegador: ${runtimeErrors.join(" | ")}`);
@@ -69,6 +72,7 @@ function assert(condition, message) {
     attachmentMissingState: true,
     correctionDialog: true,
     feedbackPost: true,
+    logoutButton: true,
     desktopColumns,
     mobileSummaryFirst: true,
     runtimeErrors,

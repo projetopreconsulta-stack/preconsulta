@@ -1,4 +1,5 @@
 const { chromium } = require("playwright");
+const { authenticate } = require("./smoke_auth.cjs");
 
 const dashboardUrl = "http://127.0.0.1:8000/medico/painel/";
 const detailPath = "/medico/pre-consultas/demo/";
@@ -19,9 +20,10 @@ function assert(condition, message) {
     if (message.type() === "error") runtimeErrors.push(message.text());
   });
 
-  const response = await page.goto(dashboardUrl, { waitUntil: "networkidle" });
+  const response = await authenticate(page, dashboardUrl);
   assert(response && response.status() === 200, "O painel não retornou 200.");
   assert(await page.locator("#dashboard-title").isVisible(), "O título da agenda não está visível.");
+  assert(await page.locator(".logout-button").isVisible(), "O botão Sair não está visível no desktop.");
   assert(await page.locator(".appointment-row").count() === 5, "A agenda de hoje não exibiu cinco casos.");
   assert(await page.locator('a[href="' + detailPath + '"]').count() === 1, "A ação da pré-consulta pronta não é única.");
   const indicatorValues = await page.locator(".indicator-strip article strong").allTextContents();
@@ -57,6 +59,7 @@ function assert(condition, message) {
   await page.goto(dashboardUrl, { waitUntil: "networkidle" });
   const firstRow = await page.locator(".appointment-row").first().boundingBox();
   assert(firstRow && firstRow.width <= 362, "A agenda móvel ultrapassou a largura útil.");
+  assert(await page.locator(".logout-button").isVisible(), "O botão Sair não está visível no mobile.");
   await page.screenshot({ path: "artifacts/painel-medico-mobile.png", fullPage: true });
 
   assert(runtimeErrors.length === 0, `Erros no navegador: ${runtimeErrors.join(" | ")}`);
@@ -71,6 +74,7 @@ function assert(condition, message) {
     patientSearch: true,
     dateSelection: true,
     mobileLayout: true,
+    logoutButton: true,
     runtimeErrors,
   }, null, 2));
 })().catch((error) => {
